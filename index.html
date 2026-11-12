@@ -209,6 +209,49 @@ h2 {
   font-size: 13px;
 }
 
+.artworks-dropdown {
+  margin-bottom: 50px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.artworks-dropdown > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.artworks-dropdown > summary::-webkit-details-marker { display: none; }
+.artworks-dropdown > summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.artworks-label { display: flex; flex-direction: column; align-items: flex-start; }
+.artworks-dropdown > summary h2 { margin: 0; font-size: 24px; }
+.artworks-label > span { color: var(--muted); font-size: 13px; }
+.artworks-preview { display: flex; justify-content: flex-end; gap: 6px; min-width: 0; }
+.artworks-preview img {
+  display: block;
+  width: clamp(36px, 8vw, 72px);
+  height: 58px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #eee;
+}
+.artworks-dropdown > summary .dropdown-indicator {
+  display: inline-block;
+  color: #138047;
+  font-size: 18px;
+  transition: transform .2s ease;
+}
+.artworks-dropdown[open] > summary .artworks-preview { display: none; }
+.artworks-dropdown[open] > summary .dropdown-indicator { transform: rotate(180deg); }
+
+.artworks-content { padding: 0 22px 1px; }
+
 .gallery {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -670,38 +713,10 @@ footer a:hover { color: #43d77d; }
     </p>
   </section>
 
-  <section id="obras">
-
-    <div class="section-heading">
-      <h2>Obras</h2>
-      <span id="totalObras">12 obras</span>
-    </div>
-
-    <div class="gallery" id="gallery"></div>
-
-    <button class="show-more" id="showMore">
-      Ver más obras
-    </button>
-
-  </section>
-
-  <section id="organizador">
-    <h2>Con el impulso de FAEX</h2>
-
-    <div class="organizer">
-      <img src="assets/faex-logo.png"
-           alt="Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura">
-      <div>
-        <h3>Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura</h3>
-        <p>Una iniciativa de la Federación Alzheimer Extremadura.</p>
-      </div>
-    </div>
-  </section>
-
   <section class="virtual" id="virtual">
     <div class="virtual-header">
       <div>
-        <h2>Exposición 3D</h2>
+        <h2>Simulador 3D</h2>
         <p>Recorre la sala virtual y explora las obras.</p>
       </div>
       <button class="virtual-link" id="fullscreenGallery" type="button">
@@ -722,6 +737,37 @@ footer a:hover { color: #43d77d; }
         <button type="button" data-move="left" aria-label="Desplazarse a la izquierda" title="Izquierda">◀</button>
         <button type="button" data-move="back" aria-label="Retroceder" title="Retroceder">▼</button>
         <button type="button" data-move="right" aria-label="Desplazarse a la derecha" title="Derecha">▶</button>
+      </div>
+    </div>
+  </section>
+
+  <details class="artworks-dropdown" id="obras">
+    <summary>
+      <div class="artworks-label">
+        <h2>Obras</h2>
+        <span id="totalObras">12 obras</span>
+      </div>
+      <div class="artworks-preview" id="artworksPreview" aria-hidden="true"></div>
+      <span class="dropdown-indicator" aria-hidden="true">⌄</span>
+    </summary>
+    <div class="artworks-content">
+      <div class="gallery" id="gallery"></div>
+
+      <button class="show-more" id="showMore">
+        Ver más obras
+      </button>
+    </div>
+  </details>
+
+  <section id="organizador">
+    <h2>Con el impulso de FAEX</h2>
+
+    <div class="organizer">
+      <img src="assets/faex-logo.png"
+           alt="Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura">
+      <div>
+        <h3>Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura</h3>
+        <p>Una iniciativa de la Federación Alzheimer Extremadura.</p>
       </div>
     </div>
   </section>
@@ -1469,6 +1515,13 @@ function initializeVirtualGallery() {
 const gallery = document.getElementById("gallery");
 const showMore = document.getElementById("showMore");
 let visibleCount = 6;
+
+artworks.slice(0, 3).forEach(art => {
+  const image = document.createElement("img");
+  image.src = art.image;
+  image.alt = "";
+  document.getElementById("artworksPreview").appendChild(image);
+});
 
 function renderGallery() {
   gallery.innerHTML = "";
