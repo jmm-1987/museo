@@ -44,6 +44,8 @@ button { font: inherit; }
 /* CABECERA */
 
 header {
+  position: relative;
+  z-index: 20;
   border-bottom: 1px solid var(--border);
   background: white;
 }
@@ -352,6 +354,7 @@ h2 {
   background: #111;
   cursor: grab;
   isolation: isolate;
+  touch-action: none;
 }
 
 .virtual-viewer:active { cursor: grabbing; }
@@ -601,9 +604,13 @@ footer a:hover { color: #43d77d; }
   .virtual { padding: 22px 16px; }
   .virtual-header { align-items: flex-start; flex-direction: column; }
   .virtual-viewer { height: 70vh; min-height: 440px; }
-  .virtual-status { right: 10px; bottom: 134px; left: 10px; font-size: 11px; }
-  .walk-controls { right: 12px; bottom: 12px; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); }
-  .walk-controls-label { right: 12px; bottom: 126px; }
+  .virtual-status { right: auto; bottom: 12px; left: 10px; max-width: calc(100% - 164px); font-size: 10px; }
+  .walk-controls { right: 12px; bottom: 12px; grid-template-columns: repeat(2, 48px); grid-template-rows: 48px; }
+  .walk-controls [data-move="forward"] { grid-column: 1; grid-row: 1; }
+  .walk-controls [data-move="back"] { grid-column: 2; grid-row: 1; }
+  .walk-controls [data-move="left"],
+  .walk-controls [data-move="right"] { display: none; }
+  .walk-controls-label { top: 12px; right: 12px; bottom: auto; }
   .about-faex { align-items: flex-start; flex-direction: column; padding: 24px; }
 }
 </style>
@@ -614,7 +621,7 @@ footer a:hover { color: #43d77d; }
 <header>
   <div class="container topbar">
     <a class="logo" href="https://www.alzheimerextremadura.org/" aria-label="Alzheimer Extremadura, página principal">
-      <img src="https://www.alzheimerextremadura.org/wp-content/uploads/logonew02.png"
+      <img src="assets/faex-logo.png"
            alt="Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura">
     </a>
 
@@ -682,7 +689,7 @@ footer a:hover { color: #43d77d; }
     <h2>Con el impulso de FAEX</h2>
 
     <div class="organizer">
-      <img src="https://www.alzheimerextremadura.org/wp-content/uploads/logonew02.png"
+      <img src="assets/faex-logo.png"
            alt="Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura">
       <div>
         <h3>Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura</h3>
@@ -735,7 +742,7 @@ footer a:hover { color: #43d77d; }
   <div class="container footer-content">
     <div>
       <img class="footer-brand"
-           src="https://www.alzheimerextremadura.org/wp-content/uploads/logonew02.png"
+           src="assets/faex-logo.png"
            alt="Federación Alzheimer Extremadura">
       <p>Federación de Asociaciones de Familiares de Enfermos de Alzheimer de Extremadura.</p>
     </div>
@@ -982,7 +989,7 @@ function initializeVirtualGallery() {
   const paintingMeshes = [];
   const infoIndicators = [];
   const textureLoader = new THREE.TextureLoader();
-  const federationLogo = "https://www.alzheimerextremadura.org/wp-content/uploads/logonew02.png";
+  const federationLogo = new URL("assets/faex-logo.png", document.baseURI).href;
 
   const display = new THREE.Group();
   display.position.set(0, 0, 3.8);
@@ -1073,7 +1080,6 @@ function initializeVirtualGallery() {
   panel.add(panelFace);
 
   const logoImage = new Image();
-  logoImage.crossOrigin = "anonymous";
   logoImage.onload = () => {
     panelContext.drawImage(logoImage, 250, 54, 700, 250);
     panelTexture.needsUpdate = true;
@@ -1081,7 +1087,7 @@ function initializeVirtualGallery() {
   };
   logoImage.onerror = error => {
     console.error("No se pudo cargar el logotipo de FAEX en el expositor:", error);
-    status.textContent = "No se pudo cargar el logotipo del expositor. Comprueba tu conexión a internet.";
+    status.textContent = "No se pudo cargar el logotipo del expositor. Comprueba que assets/faex-logo.png esté publicado junto a la página.";
   };
   logoImage.src = federationLogo;
 
@@ -1317,6 +1323,11 @@ function initializeVirtualGallery() {
       if (selected) openModal(selected.object.userData.artworkIndex);
     }
     dragStart = null;
+  });
+
+  viewer.addEventListener("pointercancel", () => {
+    dragStart = null;
+    hasDragged = false;
   });
 
   document.addEventListener("keydown", event => {
