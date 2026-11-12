@@ -605,9 +605,9 @@ footer a:hover { color: #43d77d; }
   .virtual-header { align-items: flex-start; flex-direction: column; }
   .virtual-viewer { height: 70vh; min-height: 440px; }
   .virtual-status { right: auto; bottom: 12px; left: 10px; max-width: calc(100% - 164px); font-size: 10px; }
-  .walk-controls { right: 12px; bottom: 12px; grid-template-columns: repeat(2, 48px); grid-template-rows: 48px; }
+  .walk-controls { right: 12px; bottom: 12px; grid-template-columns: 48px; grid-template-rows: repeat(2, 48px); }
   .walk-controls [data-move="forward"] { grid-column: 1; grid-row: 1; }
-  .walk-controls [data-move="back"] { grid-column: 2; grid-row: 1; }
+  .walk-controls [data-move="back"] { grid-column: 1; grid-row: 2; }
   .walk-controls [data-move="left"],
   .walk-controls [data-move="right"] { display: none; }
   .walk-controls-label { top: 12px; right: 12px; bottom: auto; }
@@ -1091,6 +1091,43 @@ function initializeVirtualGallery() {
   };
   logoImage.src = federationLogo;
 
+  const displayInfoIndicator = new THREE.Mesh(
+    new THREE.CircleGeometry(0.14, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+  );
+  displayInfoIndicator.position.set(0, 0.64, 0.22);
+  displayInfoIndicator.userData.displayInfo = true;
+  display.add(displayInfoIndicator);
+  infoIndicators.push(displayInfoIndicator);
+
+  const displayInfoRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.11, 0.14, 32),
+    new THREE.MeshBasicMaterial({ color: 0x01af52, side: THREE.DoubleSide })
+  );
+  displayInfoRing.position.set(0, 0.64, 0.225);
+  display.add(displayInfoRing);
+
+  const displayInfoCanvas = document.createElement("canvas");
+  displayInfoCanvas.width = 128;
+  displayInfoCanvas.height = 128;
+  const displayInfoContext = displayInfoCanvas.getContext("2d");
+  displayInfoContext.fillStyle = "#01af52";
+  displayInfoContext.font = "700 92px Arial";
+  displayInfoContext.textAlign = "center";
+  displayInfoContext.textBaseline = "middle";
+  displayInfoContext.fillText("i", 64, 66);
+  const displayInfoLetter = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.1, 0.1),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(displayInfoCanvas),
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    })
+  );
+  displayInfoLetter.position.set(0, 0.64, 0.23);
+  display.add(displayInfoLetter);
+
   scene.add(display);
 
   const positions = [
@@ -1244,11 +1281,28 @@ function initializeVirtualGallery() {
   let pitch = 0;
   let dragStart = null;
   let hasDragged = false;
+  let cameraTransition = null;
   let previousFrame = performance.now();
   let renderFrameId = null;
 
   function requestRender() {
     if (renderFrameId === null) renderFrameId = requestAnimationFrame(renderFrame);
+  }
+
+  function approachDisplay() {
+    const position = new THREE.Vector3(0, 1.72, 5.05);
+    const direction = new THREE.Vector3(0, 1.72, 3.8).sub(position).normalize();
+    cameraTransition = {
+      startPosition: camera.position.clone(),
+      endPosition: position,
+      startYaw: yaw,
+      startPitch: pitch,
+      endYaw: Math.atan2(-direction.x, -direction.z),
+      endPitch: Math.asin(direction.y),
+      startTime: performance.now(),
+      duration: 850
+    };
+    requestRender();
   }
 
   movementButtons.forEach(button => {
@@ -1295,6 +1349,7 @@ function initializeVirtualGallery() {
       dragStart = null;
       return;
     }
+    cameraTransition = null;
     dragStart = { x: event.clientX, y: event.clientY };
     hasDragged = false;
     viewer.setPointerCapture(event.pointerId);
@@ -1320,7 +1375,13 @@ function initializeVirtualGallery() {
       pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
       const selected = raycaster.intersectObjects([...paintingMeshes, ...infoIndicators], false)[0];
-      if (selected) openModal(selected.object.userData.artworkIndex);
+      if (selected) {
+        if (selected.object.userData.displayInfo) {
+          approachDisplay();
+        } else {
+          openModal(selected.object.userData.artworkIndex);
+        }
+      }
     }
     dragStart = null;
   });
@@ -1349,6 +1410,15 @@ function initializeVirtualGallery() {
     renderFrameId = null;
     const delta = Math.min((now - previousFrame) / 1000, 0.05);
     previousFrame = now;
+    if (cameraTransition) {
+      const progress = Math.min((now - cameraTransition.startTime) / cameraTransition.duration, 1);
+      const eased = progress * progress * (3 - 2 * progress);
+      camera.position.lerpVectors(cameraTransition.startPosition, cameraTransition.endPosition, eased);
+      yaw = cameraTransition.startYaw + (cameraTransition.endYaw - cameraTransition.startYaw) * eased;
+      pitch = cameraTransition.startPitch + (cameraTransition.endPitch - cameraTransition.startPitch) * eased;
+      camera.rotation.set(pitch, yaw, 0, "YXZ");
+      if (progress === 1) cameraTransition = null;
+    }
     const direction = new THREE.Vector3();
     camera.getWorldDirection(direction);
     direction.y = 0;
@@ -1363,7 +1433,7 @@ function initializeVirtualGallery() {
     camera.position.x = THREE.MathUtils.clamp(camera.position.x, -8.7, 8.7);
     camera.position.z = THREE.MathUtils.clamp(camera.position.z, -13.7, 13.7);
     renderer.render(scene, camera);
-    if (pressedKeys.size) requestRender();
+    if (pressedKeys.size || cameraTransition) requestRender();
   }
 
   document.getElementById("fullscreenGallery").addEventListener("click", async () => {
