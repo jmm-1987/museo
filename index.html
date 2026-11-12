@@ -1360,8 +1360,8 @@ function initializeVirtualGallery() {
     const deltaX = event.clientX - dragStart.x;
     const deltaY = event.clientY - dragStart.y;
     if (Math.abs(deltaX) + Math.abs(deltaY) > 3) hasDragged = true;
-    yaw -= deltaX * 0.004;
-    pitch = THREE.MathUtils.clamp(pitch - deltaY * 0.003, -0.45, 0.45);
+    yaw += deltaX * 0.004;
+    pitch = THREE.MathUtils.clamp(pitch + deltaY * 0.003, -0.45, 0.45);
     dragStart = { x: event.clientX, y: event.clientY };
     camera.rotation.set(pitch, yaw, 0, "YXZ");
     requestRender();
